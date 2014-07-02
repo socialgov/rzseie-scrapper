@@ -9,6 +9,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
+import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.Validate;
 import org.jsoup.nodes.Document;
@@ -39,32 +40,13 @@ public class Scrapper {
         Elements imports = doc.select("link[href]");
         
         getDetailedRegistryRecordUrlIds(doc);
-/*
-        print("\nMedia: (%d)", media.size());
-        for (Element src : media) {
-            if (src.tagName().equals("img"))
-                print(" * %s: <%s> %sx%s (%s)",
-                        src.tagName(), src.attr("abs:src"), src.attr("width"), src.attr("height"),
-                        trim(src.attr("alt"), 20));
-            else
-                print(" * %s: <%s>", src.tagName(), src.attr("abs:src"));
-        }
-
-        print("\nImports: (%d)", imports.size());
-        for (Element link : imports) {
-            print(" * %s <%s> (%s)", link.tagName(),link.attr("abs:href"), link.attr("rel"));
-        }
-
-        print("\nLinks: (%d)", links.size());
-        for (Element link : links) {
-            print(" * a: <%s>  (%s)", link.attr("abs:href"), trim(link.text(), 35));
-        }
-*/
-        
-        int pageno = getPagesListNo(doc);
-       List<RegistryRecord> list = getRecordsInPage("",  doc);
+  
+       List<RegistryPage>  pages = getPagesListNo(doc);
+       List<RegistryRecord> records = getAllPages(pages);
+       export(records);
+     //  List<RegistryRecord> list = getRecordsInPage(doc);
        
-        export(list);
+      //  export(list);
     }
 
     private static void print(String msg, Object... args) {
@@ -105,9 +87,12 @@ public class Scrapper {
     /*
      * Operacja pobiera liczbę stron zawierających dane rejestru
      */
- private static int getPagesListNo(Document doc){
+ private static List<RegistryPage> getPagesListNo(Document doc){
+	 List <RegistryPage> pages = PageParser.getRegistryPages(doc);
+	 /*
+	 
 	 Elements links = doc.select("a[href]");
- 	List <String> recordIds = new ArrayList<String>();
+	 List <RegistryPage> recordIds = new ArrayList<RegistryPage>();
  	
  	for (Element link : links) {
  		logger.debug("getPagesListNo.link.attr(\"abs:href\")="+link.attr("abs:href"));
@@ -115,22 +100,45 @@ public class Scrapper {
  				
           		
  		if (isDetailedRegistryRecordLink){
- 			String id = link.text();
+ 			String limit = link.text();
+ 			String row_id = link.attr("abs:href").toString();
+ 			int start = row_id.indexOf("row_nr=");
+ 			int stop = row_id.indexOf("&nr_nip");
+ 			try{
+ 			String sub= row_id.substring(start+7,stop);
  			
- 			recordIds.add(id);
- 		}               
+  			RegistryPage page = new RegistryPage(sub, limit);
+ 			recordIds.add(page);
+ 			}catch(Exception e)
+ 			{
+ 			//logger.info(e.getMessage()+" row_id: "+ row_id +" limit:" +limit);
+ 				int start2 = row_id.indexOf("row_nr=");
+ 	 			int stop2 = row_id.indexOf("&state_id");
+ 	 			
+ 	 			try{
+ 	 	 			String sub= row_id.substring(start+9,stop);
+ 	 	 			
+ 	 	  			RegistryPage page = new RegistryPage(sub, limit);
+ 	 	 			recordIds.add(page);
+ 	 	 			}catch(Exception e2)
+ 	 	 			{
+ 	 	 				logger.info(e2.getMessage()+" row_id: "+ row_id +" limit:" +limit);
+ 	 	 				
+ 	 	 			}
+ 			}
+ 		} 
+ 		          
      }
+ 	*/    
  	
- 	 String lastValue = recordIds.get(recordIds.size()-1);
-     Integer lastPage = new Integer(lastValue);
      
- 		return lastPage;
+ 		return pages;
  	}
  /*
   * Operacja pobiera listę rekordów rejestru
   */
  
- private static List<RegistryRecord> getRecordsInPage(String pdm_id, Document doc){
+ private static List<RegistryRecord> getRecordsInPage( Document doc){
 	 
 	 Elements table = doc.select("#tab"); 
 	// logger.info("tab"+table.text());
@@ -236,12 +244,24 @@ public class Scrapper {
 	 
  	return recordRows;
  }
+ private static List<RegistryRecord>  getAllPages(List<RegistryPage> pages) throws IOException{
+	
+	 List<RegistryRecord> records = new ArrayList<RegistryRecord>();
+	
+	 for (int i=0;i<pages.size();i++){
+	 String url="http://www.rzseie.gios.gov.pl/szukaj_rzseie.php?limit="+pages.get(i).getLimit()+"&szukaj=Wyszukaj&nazwa_podmiotu=&nr_rej=&row_nr="+ pages.get(i).getRow_nr()+"&nr_nip=";
+	 Document doc = Jsoup.connect(url).get();
+	 records.addAll(getRecordsInPage(doc));
+	
+	 }
+	 return records;
+ }
  
- 
-private static void export(List<RegistryRecord> rr) throws JAXBException{
+private static void export(List<RegistryRecord> rr) throws IOException{
 	XStream xstream = new XStream();
 	xstream.alias("rekord", RegistryRecord.class);
 	String xml = xstream.toXML(rr);
-	logger.info(xml);
+	logger.debug(xml);
+	FileUtils.writeStringToFile(new File("rzseie.xml"), xml);
 }
 }

@@ -85,19 +85,12 @@ public class RegistryRecord {
 		this.id_pdm = id_pdm;
 	}
 	
-	public String toString(){
-		StringBuffer result = new StringBuffer();
-		result.append("lp:"+this.lp);
-		result.append("nrRejestrowy"+this.nrRejestrowy);
-		result.append("firma"+this.firma);
-		result.append("siedziba:"+this.siedziba);
-		result.append("wojwodztwo:"+this.wojwodztwo);
-		result.append("nip:"+this.nip);
-		result.append("regon:"+this.regon);
-		result.append("id_pdm:"+this.id_pdm);
-		
-		return result.toString();
-		
+	@Override
+	public String toString() {
+		return "RegistryRecord [lp=" + lp + ", nrRejestrowy=" + nrRejestrowy
+				+ ", firma=" + firma + ", siedziba=" + siedziba
+				+ ", wojwodztwo=" + wojwodztwo + ", nip=" + nip + ", regon="
+				+ regon + ", id_pdm=" + id_pdm + "]";
 	}
 
 }
