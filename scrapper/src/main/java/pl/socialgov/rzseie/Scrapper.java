@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.json.JettisonMappedXmlDriver;
 
 public class Scrapper {
 
@@ -23,10 +24,11 @@ public class Scrapper {
 		try {
 			PageParser parser = new PageParser();
 
-			List<RegistryPage> pages = parser.getRegistryPages();
+			List<RegistryPage> pages = parser.getAllRegistryPages();
 			List<RegistryRecord> records = parser.getPageContents(pages);
 
 			toXml(records);
+			toJson(records);
 		} catch (Exception e) {
 			logger.error(e.getMessage());
 		}
@@ -39,6 +41,15 @@ public class Scrapper {
 		File output = new File("rzseie.xml");
 		logger.debug(xml);
 		logger.info("Liczba pobranych rekordów: "+ rr.size());
+		logger.info("Utworzono plik "+output.getName()+" z eksportem rejestru:"+ output.getAbsolutePath());
+		FileUtils.writeStringToFile(output , xml);
+	}
+	private static void toJson(List<RegistryRecord> rr) throws IOException {
+		XStream xstream = new XStream(new JettisonMappedXmlDriver());
+	    xstream.setMode(XStream.NO_REFERENCES);
+		xstream.alias("rekord", RegistryRecord.class);
+		String xml = xstream.toXML(rr);
+		File output = new File("rzseie.json");
 		logger.info("Utworzono plik "+output.getName()+" z eksportem rejestru:"+ output.getAbsolutePath());
 		FileUtils.writeStringToFile(output , xml);
 	}

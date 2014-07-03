@@ -63,6 +63,53 @@ public class PageParser {
 
 		return recordIds;
 	}
+	public List<RegistryPage> getAllRegistryPages() throws IOException{
+		int nr_row=0;
+		int limit=0;
+		
+		Connection conn =Jsoup.connect(URL);
+		conn.timeout(120000);
+		Document doc = conn.get();
+		// wybranie elementów typu href
+		Elements links = doc.select("a[href]");
+		// lista stron rejestru
+		List<Integer> recordIds = new ArrayList<Integer>();
+		List<RegistryPage> pages = new ArrayList<RegistryPage>();
+		for (Element link : links) {
+			logger.debug("getPagesListNo.link.attr(\"abs:href\")="
+					+ link.attr("abs:href"));
+			// czy link dotyczy szczegółów wpisu do rejestru
+			Boolean isDetailedRegistryRecordLink = link
+					.attr("abs:href")
+					.contains("http://www.rzseie.gios.gov.pl/szukaj_rzseie.php");
+
+			if (isDetailedRegistryRecordLink) {
+				// atrybut stronicowania -limit
+				int id = new Integer( link.text());
+				recordIds.add(id);	
+				
+				}
+		}
+		 int lastValue = recordIds.get(recordIds.size()-1);
+
+		 for(int i=0;i<lastValue;i++){
+			 limit = i+1;
+			 if(i==0){
+			 nr_row = i+1;
+			 }
+			 else{
+			 nr_row=(30*i)+1;
+			 }
+			 RegistryPage page= new RegistryPage(nr_row+"",limit+"");
+			 pages.add(page);
+			 logger.debug("Page:" +page.toString());
+		 }
+
+		logger.debug("Last value:" +lastValue);
+		
+		return pages;
+		
+	}
 
 	/*
 	 * Operacja pobiera listę rekordów na stronie
@@ -191,8 +238,8 @@ public class PageParser {
 					+ pages.get(i).getLimit()
 					+ "&szukaj=Wyszukaj&nazwa_podmiotu=&nr_rej=&row_nr="
 					+ pages.get(i).getRow_nr() + "&nr_nip=";
-			
-			Connection conn =Jsoup.connect(URL);
+			logger.debug("url: "+url);
+			Connection conn =Jsoup.connect(url);
 			conn.timeout(120000);
 			Document doc = conn.get();
 			records.addAll(getRecordsInPage(doc));
